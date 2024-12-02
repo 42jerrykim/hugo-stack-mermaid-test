@@ -1,0 +1,1504 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?><rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom"><channel><title>Posts on Hugo Theme Stack Starter</title><link>https://demo.stack.jimmycai.com/post/</link><description>Recent content in Posts on Hugo Theme Stack Starter</description><generator>Hugo -- gohugo.io</generator><language>en-us</language><lastBuildDate>Wed, 27 Nov 2024 09:22:56 +0900</lastBuildDate><atom:link href="https://demo.stack.jimmycai.com/post/index.xml" rel="self" type="application/rss+xml"/><item><title>Hello World</title><link>https://demo.stack.jimmycai.com/p/hello-world/</link><pubDate>Sun, 06 Mar 2022 00:00:00 +0000</pubDate><guid>https://demo.stack.jimmycai.com/p/hello-world/</guid><description>&lt;img src="https://demo.stack.jimmycai.com/p/hello-world/cover.jpg" alt="Featured image of post Hello World" />&lt;p>Welcome to Hugo theme Stack. This is your first post. Edit or delete it, then start writing!&lt;/p>
+&lt;p>For more information about this theme, check the documentation: &lt;a class="link" href="https://stack.jimmycai.com/" target="_blank" rel="noopener"
+>https://stack.jimmycai.com/&lt;/a>&lt;/p>
+&lt;p>Want a site like this? Check out &lt;a class="link" href="https://github.com/CaiJimmy/hugo-theme-stack-starter" target="_blank" rel="noopener"
+>hugo-theme-stack-stater&lt;/a>&lt;/p>
+&lt;blockquote>
+&lt;p>Photo by &lt;a class="link" href="https://unsplash.com/@pawel_czerwinski" target="_blank" rel="noopener"
+>Pawel Czerwinski&lt;/a> on &lt;a class="link" href="https://unsplash.com/" target="_blank" rel="noopener"
+>Unsplash&lt;/a>&lt;/p>
+&lt;/blockquote></description></item><item><title>[Linux] RCU란 무엇인가?</title><link>https://demo.stack.jimmycai.com/p/linux-rcu%EB%9E%80-%EB%AC%B4%EC%97%87%EC%9D%B8%EA%B0%80/</link><pubDate>Wed, 27 Nov 2024 09:22:56 +0900</pubDate><guid>https://demo.stack.jimmycai.com/p/linux-rcu%EB%9E%80-%EB%AC%B4%EC%97%87%EC%9D%B8%EA%B0%80/</guid><description>&lt;img src="https://demo.stack.jimmycai.com/tmp_wordcloud.png" alt="Featured image of post [Linux] RCU란 무엇인가?" />&lt;p>RCU(읽기, 복사, 업데이트)는 리눅스 커널에 추가된 동기화 메커니즘으로, 주로 읽기 작업이 많은 상황에서 최적화되어 있다. RCU는 기본적으로 업데이트를 &amp;ldquo;제거&amp;quot;와 &amp;ldquo;회수&amp;rdquo; 단계로 나누는 개념이다. 제거 단계에서는 데이터 구조 내의 데이터 항목에 대한 참조를 제거하거나 새로운 버전으로 교체하며, 이 과정은 독립적으로 실행되는 독자들과 동시에 진행될 수 있다. 현대 CPU의 의미론은 독자들이 부분적으로 업데이트된 참조가 아닌 이전 또는 새로운 버전의 데이터 구조를 보게 보장하기 때문에, 제거 단계가 독자와 동시에 실행되는 것이 안전하다. 회수 단계는 제거 단계에서 제거된 데이터 항목을 회수(예: 메모리 해제)하는 작업을 수행하며, 이 단계는 독자들이 더 이상 해당 데이터 항목에 대한 참조를 보유하지 않을 때까지 시작할 수 없다. 이러한 업데이트의 분리는 업데이트를 즉시 수행할 수 있게 하며, 회수 단계는 모든 독자가 완료될 때까지 지연될 수 있다. RCU는 경량 동기화를 가능하게 하여, 전통적인 잠금 기반 방식보다 더 효율적인 성능을 제공한다. RCU의 핵심 API는 rcu_read_lock(), rcu_read_unlock(), synchronize_rcu(), call_rcu(), rcu_assign_pointer(), rcu_dereference() 등으로 구성되어 있으며, 이들 API를 통해 독자, 업데이트, 회수 간의 상호작용을 관리한다. RCU는 다양한 사용 사례에 적합하며, 특히 읽기 작업이 많은 데이터 구조를 보호하는 데 유용하다.&lt;/p>
+&lt;!--
+##### Outline #####
+-->
+&lt;!--
+# RCU (Read-Copy-Update) 기술 블로그 목차
+## 1. 개요
+- RCU의 정의 및 중요성
+- RCU의 역사와 발전
+- RCU의 사용 사례
+## 2. RCU의 기본 개념
+- RCU의 작동 원리
+- 데이터 구조에서의 RCU의 역할
+- RCU의 장점과 단점
+## 3. RCU의 핵심 API
+- rcu_read_lock()
+- rcu_read_unlock()
+- synchronize_rcu()
+- call_rcu()
+- rcu_assign_pointer()
+- rcu_dereference()
+- RCU API의 사용 예시
+## 4. RCU의 활용 예제
+- RCU를 사용한 동적 구조체 업데이트
+- RCU를 사용한 링크드 리스트 보호
+- RCU를 사용한 NMI 핸들러 보호
+## 5. 업데이트 스레드가 블록할 수 없는 경우
+- call_rcu()의 사용
+- 비동기 콜백 메커니즘
+- kfree_rcu()의 활용
+## 6. RCU의 간단한 구현 예시
+- "장난감" RCU 구현 1: 락 기반
+- "장난감" RCU 구현 2: 고전적인 RCU
+- 실제 RCU 구현과의 비교
+## 7. RCU와 Reader-Writer Lock의 유사성
+- Reader-Writer Lock과 RCU의 비교
+- RCU의 동시성 처리 방식
+- RCU의 성능 최적화
+## 8. RCU와 Reference Counting의 유사성
+- Reference Counting의 개념
+- RCU가 Reference Counting을 어떻게 보완하는지
+- RCU를 통한 안전한 데이터 접근
+## 9. RCU API의 전체 목록
+- RCU 리스트 탐색 API
+- RCU 포인터/리스트 업데이트 API
+- RCU 관련 API 카테고리
+## 10. RCU 사용 시 고려사항
+- RCU를 사용할 때의 주의사항
+- RCU의 성능 최적화 방법
+- RCU의 적절한 사용 사례
+## 11. FAQ
+- RCU와 다른 동기화 메커니즘의 차이점은 무엇인가요?
+- RCU를 사용할 때의 일반적인 실수는 무엇인가요?
+- RCU의 성능을 어떻게 측정하나요?
+## 12. 관련 기술
+- Lock-Free 데이터 구조
+- Concurrent Programming
+- Linux Kernel의 동기화 메커니즘
+## 13. 결론
+- RCU의 중요성과 미래
+- RCU의 발전 방향
+- RCU를 통한 성능 향상 가능성
+## 14. 참고 자료
+- RCU 관련 논문 및 자료
+- RCU에 대한 추가 학습 자료
+- RCU 관련 커뮤니티 및 포럼
+이 목차는 RCU에 대한 포괄적인 이해를 돕기 위해 구성되었으며, 각 섹션은 RCU의 다양한 측면을 다루고 있습니다.
+-->
+&lt;!--
+## 1. 개요
+- RCU의 정의 및 중요성
+- RCU의 역사와 발전
+- RCU의 사용 사례
+-->
+&lt;h2 id="개요">개요
+&lt;/h2>&lt;h3 id="rcu의-정의-및-중요성">RCU의 정의 및 중요성
+&lt;/h3>&lt;p>RCU(Read-Copy-Update)는 동시성 제어를 위한 프로그래밍 패러다임으로, 주로 멀티스레드 환경에서 데이터 구조의 안전한 읽기 및 업데이트를 가능하게 한다. RCU는 읽기 작업이 빈번하고 업데이트 작업이 드문 경우에 특히 유용하다. 이 기술은 읽기 작업이 진행되는 동안 데이터 구조를 안전하게 업데이트할 수 있도록 하여, 성능을 극대화하고 잠금(lock)으로 인한 오버헤드를 줄이는 데 기여한다.&lt;/p>
+&lt;h3 id="rcu의-역사와-발전">RCU의 역사와 발전
+&lt;/h3>&lt;p>RCU는 2001년 리눅스 커널에서 처음 도입되었으며, 그 이후로 다양한 분야에서 활용되고 있다. 초기에는 리눅스 커널의 동기화 메커니즘으로 사용되었으나, 점차 다른 시스템 및 프로그래밍 언어에서도 채택되기 시작했다. RCU는 동시성 문제를 해결하기 위한 혁신적인 접근 방식으로 자리 잡았으며, 현재는 고성능 시스템에서 필수적인 기술로 인식되고 있다.&lt;/p>
+&lt;h3 id="rcu의-사용-사례">RCU의 사용 사례
+&lt;/h3>&lt;p>RCU는 다양한 분야에서 활용되고 있으며, 그 중 몇 가지 주요 사용 사례는 다음과 같다:&lt;/p>
+&lt;ul>
+&lt;li>
+&lt;p>&lt;strong>리눅스 커널&lt;/strong>: RCU는 리눅스 커널의 데이터 구조에서 동시성을 관리하는 데 사용된다. 예를 들어, 프로세스 목록이나 파일 시스템의 inode 캐시와 같은 데이터 구조에서 RCU가 활용된다.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>데이터베이스 시스템&lt;/strong>: RCU는 데이터베이스의 읽기 작업을 최적화하는 데 사용될 수 있다. 특히, 읽기 작업이 많은 OLTP(Online Transaction Processing) 시스템에서 RCU를 통해 성능을 향상시킬 수 있다.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>네트워크 프로토콜&lt;/strong>: RCU는 네트워크 스택에서 패킷 처리와 같은 고속 작업을 수행할 때 유용하다. 패킷을 처리하는 동안 데이터 구조를 안전하게 업데이트할 수 있다.&lt;/p>
+&lt;/li>
+&lt;/ul>
+&lt;p>다음은 RCU의 작동 방식을 간단히 설명하는 다이어그램이다:&lt;/p>
+&lt;pre class="mermaid">graph TD;
+A[Reader] --&amp;gt;|Read| B[RCU Data Structure]
+B --&amp;gt;|Copy| C[Updated Data]
+C --&amp;gt;|Synchronize| D[Writer]
+D --&amp;gt;|Update| B
+&lt;/pre>
+&lt;p>이 다이어그램은 RCU의 기본 작동 원리를 보여준다. Reader가 데이터 구조를 읽는 동안 Writer는 안전하게 업데이트를 수행할 수 있으며, 이 과정에서 데이터의 일관성을 유지할 수 있다. RCU는 이러한 방식으로 동시성을 관리하여 성능을 극대화하는 데 기여한다.&lt;/p>
+&lt;!--
+## 2. RCU의 기본 개념
+- RCU의 작동 원리
+- 데이터 구조에서의 RCU의 역할
+- RCU의 장점과 단점
+-->
+&lt;h2 id="rcu의-기본-개념">RCU의 기본 개념
+&lt;/h2>&lt;h3 id="rcu의-작동-원리">RCU의 작동 원리
+&lt;/h3>&lt;p>RCU(Read-Copy-Update)는 동시성 제어를 위한 메커니즘으로, 주로 읽기 작업이 많은 환경에서 성능을 극대화하기 위해 설계되었다. RCU의 기본 원리는 읽기 작업이 진행되는 동안 데이터 구조를 안전하게 업데이트할 수 있도록 하는 것이다. 이를 위해 RCU는 다음과 같은 단계를 따른다.&lt;/p>
+&lt;ol>
+&lt;li>&lt;strong>읽기 작업&lt;/strong>: RCU를 사용하는 스레드는 &lt;code>rcu_read_lock()&lt;/code>을 호출하여 읽기 작업을 시작한다. 이때, 다른 스레드가 데이터를 수정할 수 없도록 보호된다.&lt;/li>
+&lt;li>&lt;strong>데이터 복사&lt;/strong>: 업데이트가 필요한 경우, 기존 데이터를 복사하여 새로운 데이터를 생성한다. 이 과정에서 기존 데이터는 여전히 읽기 작업에 사용될 수 있다.&lt;/li>
+&lt;li>&lt;strong>업데이트 완료&lt;/strong>: 새로운 데이터가 준비되면, &lt;code>rcu_assign_pointer()&lt;/code>를 사용하여 포인터를 업데이트한다. 이때, 기존 데이터는 여전히 읽기 작업에 사용될 수 있다.&lt;/li>
+&lt;li>&lt;strong>동기화&lt;/strong>: 모든 읽기 작업이 완료된 후, &lt;code>synchronize_rcu()&lt;/code>를 호출하여 이전 데이터가 안전하게 해제될 수 있도록 한다.&lt;/li>
+&lt;/ol>
+&lt;p>이러한 방식으로 RCU는 읽기 작업과 쓰기 작업을 효과적으로 분리하여 성능을 향상시킨다.&lt;/p>
+&lt;pre class="mermaid">graph TD;
+A[&amp;#34;rcu_read_lock()&amp;#34;] --&amp;gt; B[읽기 작업];
+B --&amp;gt; C[데이터 복사];
+C --&amp;gt; D[&amp;#34;rcu_assign_pointer()&amp;#34;];
+D --&amp;gt; E[업데이트 완료];
+E --&amp;gt; F[&amp;#34;synchronize_rcu()&amp;#34;];
+F --&amp;gt; G[이전 데이터 해제];
+&lt;/pre>
+&lt;h3 id="데이터-구조에서의-rcu의-역할">데이터 구조에서의 RCU의 역할
+&lt;/h3>&lt;p>RCU는 다양한 데이터 구조에서 사용될 수 있으며, 특히 링크드 리스트, 해시 테이블, 트리 구조 등에서 효과적이다. RCU는 데이터 구조의 읽기 작업이 빈번하게 발생하는 경우에 유용하며, 다음과 같은 역할을 한다.&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>읽기 최적화&lt;/strong>: RCU는 읽기 작업이 블록되지 않도록 하여, 다수의 스레드가 동시에 데이터를 읽을 수 있도록 한다.&lt;/li>
+&lt;li>&lt;strong>안전한 업데이트&lt;/strong>: 데이터 구조를 업데이트할 때, 기존 데이터를 안전하게 유지하면서 새로운 데이터를 추가할 수 있다.&lt;/li>
+&lt;li>&lt;strong>메모리 관리&lt;/strong>: RCU는 메모리 해제를 지연시켜, 읽기 작업이 완료된 후에만 이전 데이터를 해제할 수 있도록 한다.&lt;/li>
+&lt;/ul>
+&lt;p>이러한 특성 덕분에 RCU는 고성능의 동시성 제어를 제공하며, 특히 읽기 작업이 많은 시스템에서 유리하다.&lt;/p>
+&lt;h3 id="rcu의-장점과-단점">RCU의 장점과 단점
+&lt;/h3>&lt;p>RCU는 여러 장점을 가지고 있지만, 몇 가지 단점도 존재한다. 다음은 RCU의 장점과 단점이다.&lt;/p>
+&lt;p>&lt;strong>장점&lt;/strong>:&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>높은 성능&lt;/strong>: 읽기 작업이 블록되지 않기 때문에, 다수의 스레드가 동시에 데이터를 읽을 수 있어 성능이 향상된다.&lt;/li>
+&lt;li>&lt;strong>간단한 API&lt;/strong>: RCU는 간단한 API를 제공하여 사용자가 쉽게 사용할 수 있도록 한다.&lt;/li>
+&lt;li>&lt;strong>유연한 메모리 관리&lt;/strong>: 메모리 해제를 지연시켜, 안전한 데이터 접근을 보장한다.&lt;/li>
+&lt;/ul>
+&lt;p>&lt;strong>단점&lt;/strong>:&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>메모리 사용량 증가&lt;/strong>: 데이터 복사 및 지연된 메모리 해제로 인해 메모리 사용량이 증가할 수 있다.&lt;/li>
+&lt;li>&lt;strong>복잡한 구현&lt;/strong>: RCU를 올바르게 구현하기 위해서는 동시성 및 메모리 모델에 대한 깊은 이해가 필요하다.&lt;/li>
+&lt;li>&lt;strong>읽기 작업의 지연&lt;/strong>: 업데이트가 진행되는 동안 읽기 작업이 지연될 수 있으며, 이는 성능 저하로 이어질 수 있다.&lt;/li>
+&lt;/ul>
+&lt;p>RCU는 이러한 장점과 단점을 고려하여 적절한 상황에서 사용해야 하며, 성능 최적화를 위해 다양한 기법을 적용할 수 있다.&lt;/p>
+&lt;!--
+## 3. RCU의 핵심 API
+- rcu_read_lock()
+- rcu_read_unlock()
+- synchronize_rcu()
+- call_rcu()
+- rcu_assign_pointer()
+- rcu_dereference()
+- RCU API의 사용 예시
+-->
+&lt;h2 id="rcu의-핵심-api">RCU의 핵심 API
+&lt;/h2>&lt;p>RCU(Read-Copy-Update)는 동시성 프로그래밍에서 중요한 역할을 하는 메커니즘이다. RCU의 핵심 API는 이 메커니즘을 효과적으로 활용하기 위해 필수적이다. 이번 섹션에서는 RCU의 주요 API에 대해 살펴보겠다.&lt;/p>
+&lt;h3 id="rcu_read_lock">rcu_read_lock()
+&lt;/h3>&lt;p>**rcu_read_lock()**은 RCU 읽기 세션을 시작하는 함수이다. 이 함수를 호출하면 현재 스레드는 RCU 읽기 세션에 들어가며, 이 세션 동안에는 데이터 구조에 대한 읽기 작업이 안전하게 수행될 수 있다. 이 함수는 RCU의 동시성 모델을 지원하기 위해 사용된다.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="nf">rcu_read_lock&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// 데이터 구조에 대한 읽기 작업
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="nf">rcu_read_unlock&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="rcu_read_unlock">rcu_read_unlock()
+&lt;/h3>&lt;p>**rcu_read_unlock()**은 RCU 읽기 세션을 종료하는 함수이다. 이 함수를 호출하면 현재 스레드는 RCU 읽기 세션에서 나가게 되며, 이후에는 RCU 보호를 받지 않는 데이터 구조에 대한 작업을 수행할 수 있다.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="nf">rcu_read_lock&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// 데이터 구조에 대한 읽기 작업
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="nf">rcu_read_unlock&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="synchronize_rcu">synchronize_rcu()
+&lt;/h3>&lt;p>**synchronize_rcu()**는 모든 이전 RCU 읽기 세션이 완료될 때까지 대기하는 함수이다. 이 함수는 RCU 업데이트가 안전하게 완료되었음을 보장하기 위해 사용된다. 이 함수는 RCU 업데이트가 완료된 후에 안전하게 메모리를 해제할 수 있도록 도와준다.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="nf">synchronize_rcu&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">// 안전하게 메모리 해제
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="call_rcu">call_rcu()
+&lt;/h3>&lt;p>**call_rcu()**는 비동기적으로 콜백 함수를 호출하는 API이다. 이 함수는 RCU 업데이트가 완료된 후에 특정 작업을 수행해야 할 때 유용하다. 이 API는 RCU의 비동기 콜백 메커니즘을 활용하여, 업데이트 스레드가 블록되지 않도록 한다.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;span class="lnt">5
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">my_callback&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">rcu_head&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">head&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// 콜백 작업
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nf">call_rcu&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">my_rcu_head&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">my_callback&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="rcu_assign_pointer">rcu_assign_pointer()
+&lt;/h3>&lt;p>**rcu_assign_pointer()**는 RCU 포인터를 안전하게 할당하는 함수이다. 이 함수는 RCU의 동시성 모델을 준수하면서 포인터를 할당할 수 있도록 도와준다. 이 API를 사용하면 RCU 보호를 받는 데이터 구조에 대한 안전한 포인터 할당이 가능하다.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="k">struct&lt;/span> &lt;span class="n">my_struct&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">ptr&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="nf">rcu_assign_pointer&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">ptr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">new_value&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="rcu_dereference">rcu_dereference()
+&lt;/h3>&lt;p>**rcu_dereference()**는 RCU 포인터를 안전하게 역참조하는 함수이다. 이 함수를 사용하면 RCU 보호를 받는 데이터 구조에 대한 안전한 접근이 가능하다. 이 API는 RCU의 동시성 모델을 준수하면서 데이터에 접근할 수 있도록 도와준다.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="k">struct&lt;/span> &lt;span class="n">my_struct&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">ptr&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">rcu_dereference&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">my_rcu_pointer&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="rcu-api의-사용-예시">RCU API의 사용 예시
+&lt;/h3>&lt;p>RCU API를 활용한 간단한 예시를 통해 RCU의 작동 방식을 이해할 수 있다. 아래는 RCU를 사용하여 링크드 리스트를 안전하게 업데이트하는 예시이다.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="k">struct&lt;/span> &lt;span class="n">my_node&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">data&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">my_node&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">next&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">};&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">struct&lt;/span> &lt;span class="n">my_node&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">head&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">update_list&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">int&lt;/span> &lt;span class="n">new_data&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">my_node&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">new_node&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">kmalloc&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">my_node&lt;/span>&lt;span class="p">),&lt;/span> &lt;span class="n">GFP_KERNEL&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">new_node&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">data&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">new_data&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">rcu_read_lock&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">my_node&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">old_head&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">rcu_dereference&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">head&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">new_node&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">next&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">old_head&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">rcu_assign_pointer&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">head&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">new_node&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">rcu_read_unlock&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;pre class="mermaid">graph TD;
+A[&amp;#34;rcu_read_lock()&amp;#34;] --&amp;gt; B[데이터 읽기];
+B --&amp;gt; C[&amp;#34;rcu_read_unlock()&amp;#34;];
+C --&amp;gt; D[&amp;#34;synchronize_rcu()&amp;#34;];
+D --&amp;gt; E[&amp;#34;call_rcu()&amp;#34;];
+E --&amp;gt; F[&amp;#34;rcu_assign_pointer()&amp;#34;];
+F --&amp;gt; G[&amp;#34;rcu_dereference()&amp;#34;];
+&lt;/pre>
+&lt;p>위의 다이어그램은 RCU API의 흐름을 시각적으로 나타낸 것이다. 각 API의 호출 순서를 통해 RCU의 작동 방식을 이해할 수 있다. RCU API는 동시성 프로그래밍에서 안전하고 효율적인 데이터 접근을 가능하게 해준다.&lt;/p>
+&lt;!--
+## 4. RCU의 활용 예제
+- RCU를 사용한 동적 구조체 업데이트
+- RCU를 사용한 링크드 리스트 보호
+- RCU를 사용한 NMI 핸들러 보호
+-->
+&lt;h2 id="rcu의-활용-예제">RCU의 활용 예제
+&lt;/h2>&lt;p>RCU(Read-Copy-Update)는 고성능 동시성 제어를 위한 강력한 메커니즘으로, 다양한 상황에서 유용하게 활용될 수 있다. 이번 섹션에서는 RCU를 사용한 몇 가지 활용 예제를 살펴보겠다.&lt;/p>
+&lt;h3 id="rcu를-사용한-동적-구조체-업데이트">RCU를 사용한 동적 구조체 업데이트
+&lt;/h3>&lt;p>RCU는 동적 구조체를 안전하게 업데이트하는 데 매우 유용하다. 예를 들어, 여러 스레드가 동시에 구조체를 읽고 업데이트할 때, RCU를 사용하면 읽기 작업이 블록되지 않으면서도 안전하게 업데이트를 수행할 수 있다. 아래는 RCU를 사용한 동적 구조체 업데이트의 간단한 예시이다.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;linux/rcupdate.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;linux/slab.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">struct&lt;/span> &lt;span class="n">my_struct&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">data&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">rcu_head&lt;/span> &lt;span class="n">rcu&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">};&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">update_struct&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">my_struct&lt;/span> &lt;span class="o">**&lt;/span>&lt;span class="n">ptr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">int&lt;/span> &lt;span class="n">new_data&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">my_struct&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">new_struct&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">new_struct&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">kmalloc&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="n">new_struct&lt;/span>&lt;span class="p">),&lt;/span> &lt;span class="n">GFP_KERNEL&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">new_struct&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">data&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">new_data&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">rcu_assign_pointer&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="n">ptr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">new_struct&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">synchronize_rcu&lt;/span>&lt;span class="p">();&lt;/span> &lt;span class="c1">// 모든 RCU 읽기 작업이 완료될 때까지 대기
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">free_struct&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">my_struct&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">ptr&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">call_rcu&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">ptr&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">rcu&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">kfree_rcu_callback&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">kfree_rcu_callback&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">rcu_head&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">head&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">my_struct&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">ptr&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">container_of&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">head&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">struct&lt;/span> &lt;span class="n">my_struct&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">rcu&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">kfree&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">ptr&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;pre class="mermaid">graph TD;
+A[RCU Read] --&amp;gt;|Read Data| B[my_struct]
+B --&amp;gt;|Update Data| C[New my_struct]
+C --&amp;gt;|Assign Pointer| D[RCU Pointer]
+D --&amp;gt;|Synchronize| E[Free Old Struct]
+&lt;/pre>
+&lt;h3 id="rcu를-사용한-링크드-리스트-보호">RCU를 사용한 링크드 리스트 보호
+&lt;/h3>&lt;p>링크드 리스트와 같은 데이터 구조에서 RCU를 사용하면, 여러 스레드가 동시에 리스트를 탐색하고 수정할 수 있다. RCU는 읽기 작업이 블록되지 않도록 하여 성능을 극대화할 수 있다. 아래는 RCU를 사용한 링크드 리스트 보호의 예시이다.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="k">struct&lt;/span> &lt;span class="n">list_node&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">data&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">list_node&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">next&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">rcu_head&lt;/span> &lt;span class="n">rcu&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">};&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">add_node&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">list_node&lt;/span> &lt;span class="o">**&lt;/span>&lt;span class="n">head&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">int&lt;/span> &lt;span class="n">new_data&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">list_node&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">new_node&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">new_node&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">kmalloc&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="n">new_node&lt;/span>&lt;span class="p">),&lt;/span> &lt;span class="n">GFP_KERNEL&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">new_node&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">data&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">new_data&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">rcu_assign_pointer&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">new_node&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">next&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">head&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">rcu_assign_pointer&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="n">head&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">new_node&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">remove_node&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">list_node&lt;/span> &lt;span class="o">**&lt;/span>&lt;span class="n">head&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">struct&lt;/span> &lt;span class="n">list_node&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">node_to_remove&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">list_node&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">next_node&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">rcu_read_lock&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">next_node&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">rcu_dereference&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">node_to_remove&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">next&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">rcu_read_unlock&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">call_rcu&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">node_to_remove&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">rcu&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">kfree_rcu_callback&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;pre class="mermaid">graph TD;
+A[Head Node] --&amp;gt;|Add Node| B[New Node]
+B --&amp;gt;|Next Pointer| C[Next Node]
+C --&amp;gt;|Remove Node| D[Node to Remove]
+D --&amp;gt;|Call RCU| E[Free Node]
+&lt;/pre>
+&lt;h3 id="rcu를-사용한-nmi-핸들러-보호">RCU를 사용한 NMI 핸들러 보호
+&lt;/h3>&lt;p>NMI(Non-Maskable Interrupt) 핸들러는 시스템의 중요한 부분으로, RCU를 사용하여 안전하게 보호할 수 있다. RCU는 NMI 핸들러가 실행되는 동안에도 데이터 구조에 대한 안전한 접근을 보장한다. 아래는 RCU를 사용한 NMI 핸들러 보호의 예시이다.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="k">struct&lt;/span> &lt;span class="n">nmi_data&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">value&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">rcu_head&lt;/span> &lt;span class="n">rcu&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">};&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">nmi_handler&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">nmi_data&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">data&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">rcu_read_lock&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// 데이터에 대한 안전한 읽기 작업 수행
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="kt">int&lt;/span> &lt;span class="n">value&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">rcu_dereference&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">data&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">value&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">rcu_read_unlock&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">update_nmi_data&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">nmi_data&lt;/span> &lt;span class="o">**&lt;/span>&lt;span class="n">data_ptr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">int&lt;/span> &lt;span class="n">new_value&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">nmi_data&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">new_data&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">new_data&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">kmalloc&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="n">new_data&lt;/span>&lt;span class="p">),&lt;/span> &lt;span class="n">GFP_KERNEL&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">new_data&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">value&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">new_value&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">rcu_assign_pointer&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="n">data_ptr&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">new_data&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">synchronize_rcu&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;pre class="mermaid">graph TD;
+A[NMI Handler] --&amp;gt;|Read Data| B[NMI Data]
+B --&amp;gt;|Update Data| C[New NMI Data]
+C --&amp;gt;|Assign Pointer| D[RCU Pointer]
+D --&amp;gt;|Synchronize| E[Free Old Data]
+&lt;/pre>
+&lt;p>이와 같이 RCU는 다양한 상황에서 유용하게 활용될 수 있으며, 동시성 문제를 해결하는 데 큰 도움이 된다. RCU를 적절히 사용하면 성능을 극대화하면서도 안전한 데이터 접근을 보장할 수 있다.&lt;/p>
+&lt;!--
+## 5. 업데이트 스레드가 블록할 수 없는 경우
+- call_rcu()의 사용
+- 비동기 콜백 메커니즘
+- kfree_rcu()의 활용
+-->
+&lt;h2 id="업데이트-스레드가-블록할-수-없는-경우">업데이트 스레드가 블록할 수 없는 경우
+&lt;/h2>&lt;p>RCU(Read-Copy-Update) 메커니즘은 동시성 프로그래밍에서 중요한 역할을 하며, 특히 업데이트 스레드가 블록할 수 없는 경우에 유용하다. 이 섹션에서는 &lt;code>call_rcu()&lt;/code>의 사용, 비동기 콜백 메커니즘, 그리고 &lt;code>kfree_rcu()&lt;/code>의 활용에 대해 설명하겠다.&lt;/p>
+&lt;h3 id="call_rcu의-사용">call_rcu()의 사용
+&lt;/h3>&lt;p>&lt;code>call_rcu()&lt;/code> 함수는 RCU의 핵심 기능 중 하나로, 특정 데이터 구조를 안전하게 해제할 수 있도록 비동기적으로 콜백을 등록하는 데 사용된다. 이 함수는 업데이트 스레드가 블록되지 않도록 하여, 데이터 구조의 안전한 해제를 보장한다.&lt;/p>
+&lt;p>다음은 &lt;code>call_rcu()&lt;/code>의 사용 예시이다.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;linux/rcupdate.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;linux/slab.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">struct&lt;/span> &lt;span class="n">my_data&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">value&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">rcu_head&lt;/span> &lt;span class="n">rcu&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">};&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">my_callback&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">rcu_head&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">head&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">my_data&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">data&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">container_of&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">head&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">struct&lt;/span> &lt;span class="n">my_data&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">rcu&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">kfree&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">data&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">update_data&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">my_data&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">data&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// 데이터 업데이트 로직
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="nf">call_rcu&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">data&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">rcu&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">my_callback&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>위의 코드에서 &lt;code>update_data()&lt;/code> 함수는 데이터 구조를 업데이트한 후, &lt;code>call_rcu()&lt;/code>를 호출하여 비동기적으로 &lt;code>my_callback()&lt;/code>을 등록한다. 이 콜백은 RCU의 동기화가 완료된 후에 호출되어 메모리를 안전하게 해제한다.&lt;/p>
+&lt;h3 id="비동기-콜백-메커니즘">비동기 콜백 메커니즘
+&lt;/h3>&lt;p>비동기 콜백 메커니즘은 RCU의 중요한 특징으로, 업데이트 스레드가 블록되지 않도록 한다. 이 메커니즘을 통해, 데이터 구조의 해제는 RCU의 동기화가 완료된 후에 이루어지며, 이는 시스템의 성능을 향상시킨다.&lt;/p>
+&lt;p>비동기 콜백은 다음과 같은 과정을 거친다:&lt;/p>
+&lt;ol>
+&lt;li>데이터 구조가 업데이트된다.&lt;/li>
+&lt;li>&lt;code>call_rcu()&lt;/code>를 통해 콜백이 등록된다.&lt;/li>
+&lt;li>RCU의 동기화가 완료되면, 등록된 콜백이 호출된다.&lt;/li>
+&lt;/ol>
+&lt;p>이러한 방식으로, 업데이트 스레드는 블록되지 않으며, 다른 스레드가 데이터 구조에 접근할 수 있는 동안 안전하게 메모리를 해제할 수 있다.&lt;/p>
+&lt;h3 id="kfree_rcu의-활용">kfree_rcu()의 활용
+&lt;/h3>&lt;p>&lt;code>kfree_rcu()&lt;/code> 함수는 RCU를 사용하여 메모리를 해제하는 또 다른 방법이다. 이 함수는 &lt;code>call_rcu()&lt;/code>와 유사하게 작동하지만, 메모리 해제를 더 간편하게 처리할 수 있도록 돕는다.&lt;/p>
+&lt;p>다음은 &lt;code>kfree_rcu()&lt;/code>의 사용 예시이다.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">update_data_and_free&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">my_data&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">data&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// 데이터 업데이트 로직
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="nf">kfree_rcu&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">data&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">rcu&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>위의 코드에서 &lt;code>kfree_rcu()&lt;/code>는 데이터 구조를 업데이트한 후, RCU의 동기화가 완료되면 자동으로 메모리를 해제한다. 이로 인해 개발자는 메모리 해제를 위한 추가적인 콜백을 작성할 필요가 없어진다.&lt;/p>
+&lt;h3 id="다이어그램">다이어그램
+&lt;/h3>&lt;p>다음은 RCU의 비동기 콜백 메커니즘을 설명하는 다이어그램이다.&lt;/p>
+&lt;pre class="mermaid">graph TD;
+A[업데이트 스레드] --&amp;gt;|데이터 업데이트| B[&amp;#34;call_rcu() 호출&amp;#34;]
+B --&amp;gt; C[RCU 동기화 대기]
+C --&amp;gt;|동기화 완료| D[콜백 호출]
+D --&amp;gt; E[메모리 해제]
+&lt;/pre>
+&lt;p>이 다이어그램은 업데이트 스레드가 데이터 구조를 업데이트하고, &lt;code>call_rcu()&lt;/code>를 호출한 후, RCU의 동기화가 완료되면 콜백이 호출되어 메모리가 해제되는 과정을 보여준다.&lt;/p>
+&lt;p>이와 같이 RCU는 업데이트 스레드가 블록되지 않도록 하여, 동시성 프로그래밍에서의 성능을 극대화하는 데 기여한다.&lt;/p>
+&lt;!--
+## 6. RCU의 간단한 구현 예시
+- "장난감" RCU 구현 1: 락 기반
+- "장난감" RCU 구현 2: 고전적인 RCU
+- 실제 RCU 구현과의 비교
+-->
+&lt;h2 id="rcu의-간단한-구현-예시">RCU의 간단한 구현 예시
+&lt;/h2>&lt;p>RCU(Read-Copy-Update)는 고성능 동시성 제어 메커니즘으로, 다양한 구현 방식이 존재한다. 이번 섹션에서는 RCU의 간단한 구현 예시를 통해 그 작동 방식을 이해하고, 실제 RCU 구현과의 차이점을 살펴보겠다.&lt;/p>
+&lt;h3 id="장난감-rcu-구현-1-락-기반">&amp;ldquo;장난감&amp;rdquo; RCU 구현 1: 락 기반
+&lt;/h3>&lt;p>락 기반 RCU 구현은 전통적인 락 메커니즘을 사용하여 데이터 접근을 제어하는 방식이다. 이 구현에서는 읽기 작업이 락을 획득하고, 쓰기 작업이 락을 해제할 때까지 다른 스레드가 해당 데이터에 접근할 수 없도록 한다. 아래는 간단한 락 기반 RCU 구현의 예시이다.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;pthread.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;stdio.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;stdlib.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">typedef&lt;/span> &lt;span class="k">struct&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">data&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">pthread_mutex_t&lt;/span> &lt;span class="n">lock&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span> &lt;span class="kt">rcu_t&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">rcu_init&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">rcu_t&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">rcu&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">rcu&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">data&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="mi">0&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">pthread_mutex_init&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">rcu&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">lock&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="nb">NULL&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">rcu_read_lock&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">rcu_t&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">rcu&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">pthread_mutex_lock&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">rcu&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">lock&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">rcu_read_unlock&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">rcu_t&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">rcu&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">pthread_mutex_unlock&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">rcu&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">lock&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">rcu_update&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">rcu_t&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">rcu&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">int&lt;/span> &lt;span class="n">new_data&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">rcu_read_lock&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">rcu&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">rcu&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">data&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">new_data&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">rcu_read_unlock&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">rcu&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">int&lt;/span> &lt;span class="nf">rcu_get_data&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">rcu_t&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">rcu&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">rcu&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">data&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>이 구현은 간단하지만, 락을 사용하기 때문에 성능이 저하될 수 있다. 특히, 많은 읽기 작업이 동시에 발생할 경우 락 경합이 발생할 수 있다.&lt;/p>
+&lt;h3 id="장난감-rcu-구현-2-고전적인-rcu">&amp;ldquo;장난감&amp;rdquo; RCU 구현 2: 고전적인 RCU
+&lt;/h3>&lt;p>고전적인 RCU 구현은 읽기 작업이 락을 사용하지 않고, 쓰기 작업이 데이터의 복사본을 생성하여 업데이트하는 방식이다. 이 방식은 읽기 작업이 매우 빠르며, 쓰기 작업이 완료된 후에만 데이터가 교체된다. 아래는 고전적인 RCU 구현의 예시이다.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;stdio.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;stdlib.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">typedef&lt;/span> &lt;span class="k">struct&lt;/span> &lt;span class="n">rcu_node&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">data&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">rcu_node&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">next&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span> &lt;span class="kt">rcu_node_t&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">rcu_node_t&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">rcu_head&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nb">NULL&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">rcu_update&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">int&lt;/span> &lt;span class="n">new_data&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">rcu_node_t&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">new_node&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">malloc&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">rcu_node_t&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">new_node&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">data&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">new_data&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">new_node&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">next&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">rcu_head&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">rcu_head&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">new_node&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">int&lt;/span> &lt;span class="nf">rcu_get_data&lt;/span>&lt;span class="p">()&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">rcu_head&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">data&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>이 구현은 읽기 작업이 락을 사용하지 않기 때문에 성능이 우수하다. 그러나 메모리 관리에 주의해야 하며, 쓰기 작업이 완료된 후에 이전 노드를 안전하게 해제해야 한다.&lt;/p>
+&lt;h3 id="실제-rcu-구현과의-비교">실제 RCU 구현과의 비교
+&lt;/h3>&lt;p>실제 RCU 구현은 위의 두 가지 방식의 장점을 결합하여, 읽기 작업의 성능을 극대화하고 쓰기 작업의 안전성을 보장한다. 실제 RCU는 다음과 같은 특징을 가진다.&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>비동기 콜백&lt;/strong>: 쓰기 작업이 완료된 후, 이전 데이터에 대한 참조가 더 이상 필요하지 않을 때 비동기적으로 메모리를 해제한다.&lt;/li>
+&lt;li>&lt;strong>동시성&lt;/strong>: 읽기 작업이 락 없이 수행되므로, 높은 동시성을 제공한다.&lt;/li>
+&lt;li>&lt;strong>안전성&lt;/strong>: 데이터의 일관성을 유지하면서도, 메모리 접근을 안전하게 관리한다.&lt;/li>
+&lt;/ul>
+&lt;p>아래는 RCU의 작동 방식을 나타내는 다이어그램이다.&lt;/p>
+&lt;pre class="mermaid">graph TD;
+A[읽기 작업] --&amp;gt;|락 없이| B[데이터 접근]
+C[쓰기 작업] --&amp;gt;|데이터 복사| D[새로운 데이터]
+D --&amp;gt;|교체| E[업데이트 완료]
+E --&amp;gt;|비동기 해제| F[이전 데이터 해제]
+&lt;/pre>
+&lt;p>이와 같이 RCU의 간단한 구현 예시는 RCU의 기본 개념을 이해하는 데 도움을 주며, 실제 구현에서의 성능과 안전성을 비교하는 데 유용하다.&lt;/p>
+&lt;!--
+## 7. RCU와 Reader-Writer Lock의 유사성
+- Reader-Writer Lock과 RCU의 비교
+- RCU의 동시성 처리 방식
+- RCU의 성능 최적화
+-->
+&lt;h2 id="rcu와-reader-writer-lock의-유사성">RCU와 Reader-Writer Lock의 유사성
+&lt;/h2>&lt;h3 id="reader-writer-lock과-rcu의-비교">Reader-Writer Lock과 RCU의 비교
+&lt;/h3>&lt;p>Reader-Writer Lock과 RCU는 모두 동시성 제어를 위한 메커니즘으로, 다수의 읽기 작업과 적은 수의 쓰기 작업이 동시에 발생하는 상황에서 성능을 최적화하는 데 중점을 둔다. Reader-Writer Lock은 읽기 작업이 진행되는 동안 다른 읽기 작업은 허용하지만, 쓰기 작업이 진행될 때는 모든 읽기 작업과 쓰기 작업이 차단된다. 반면, RCU는 읽기 작업이 진행되는 동안 쓰기 작업이 안전하게 수행될 수 있도록 설계되어 있다. RCU는 읽기 작업이 완료될 때까지 쓰기 작업이 지연되지만, 읽기 작업은 블록되지 않기 때문에 높은 동시성을 제공한다.&lt;/p>
+&lt;pre class="mermaid">graph TD;
+A[Reader-Writer Lock] --&amp;gt;|읽기| B[읽기 작업 허용]
+A --&amp;gt;|쓰기| C[모든 작업 차단]
+D[RCU] --&amp;gt;|읽기| E[읽기 작업 허용]
+D --&amp;gt;|쓰기| F[쓰기 작업 지연]
+&lt;/pre>
+&lt;h3 id="rcu의-동시성-처리-방식">RCU의 동시성 처리 방식
+&lt;/h3>&lt;p>RCU는 읽기 작업이 진행되는 동안 데이터 구조의 상태를 변경할 수 있는 독특한 방식을 제공한다. RCU의 핵심은 읽기 작업이 완료될 때까지 쓰기 작업이 지연되도록 하여, 읽기 작업이 안전하게 데이터를 참조할 수 있도록 하는 것이다. 이를 통해 RCU는 높은 동시성을 유지하면서도 데이터의 일관성을 보장할 수 있다. RCU는 주로 다음과 같은 방식으로 동시성을 처리한다.&lt;/p>
+&lt;ol>
+&lt;li>&lt;strong>읽기 작업&lt;/strong>: rcu_read_lock()과 rcu_read_unlock()을 사용하여 읽기 작업을 시작하고 종료한다. 이 사이에 데이터에 대한 읽기가 이루어진다.&lt;/li>
+&lt;li>&lt;strong>쓰기 작업&lt;/strong>: 쓰기 작업은 데이터 구조를 수정하기 전에 synchronize_rcu()를 호출하여 모든 현재 진행 중인 읽기 작업이 완료될 때까지 대기한다.&lt;/li>
+&lt;li>&lt;strong>콜백 처리&lt;/strong>: call_rcu()를 사용하여 비동기적으로 메모리 해제를 처리할 수 있다.&lt;/li>
+&lt;/ol>
+&lt;h3 id="rcu의-성능-최적화">RCU의 성능 최적화
+&lt;/h3>&lt;p>RCU는 성능 최적화를 위해 여러 가지 기법을 사용한다. 그 중 일부는 다음과 같다.&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>비동기 콜백&lt;/strong>: RCU는 call_rcu()를 통해 비동기적으로 메모리 해제를 처리하여, 쓰기 작업이 완료된 후에도 읽기 작업이 계속 진행될 수 있도록 한다.&lt;/li>
+&lt;li>&lt;strong>지연된 메모리 해제&lt;/strong>: synchronize_rcu()를 사용하여 모든 읽기 작업이 완료된 후에만 메모리를 해제함으로써, 메모리 접근의 안전성을 높인다.&lt;/li>
+&lt;li>&lt;strong>경량화된 락&lt;/strong>: RCU는 락을 사용하지 않거나 최소화하여, 쓰기 작업의 오버헤드를 줄이고 성능을 향상시킨다.&lt;/li>
+&lt;/ul>
+&lt;p>이러한 최적화 기법들은 RCU가 높은 동시성을 유지하면서도 성능을 극대화할 수 있도록 돕는다. RCU는 특히 읽기 작업이 많은 환경에서 뛰어난 성능을 발휘하며, 다양한 데이터 구조에서 효과적으로 활용될 수 있다.&lt;/p>
+&lt;!--
+## 8. RCU와 Reference Counting의 유사성
+- Reference Counting의 개념
+- RCU가 Reference Counting을 어떻게 보완하는지
+- RCU를 통한 안전한 데이터 접근
+-->
+&lt;h2 id="rcu와-reference-counting의-유사성">RCU와 Reference Counting의 유사성
+&lt;/h2>&lt;h3 id="reference-counting의-개념">Reference Counting의 개념
+&lt;/h3>&lt;p>Reference Counting은 객체의 사용 횟수를 추적하는 메커니즘이다. 각 객체는 참조 카운터를 가지고 있으며, 객체에 대한 참조가 생성될 때 카운터가 증가하고, 참조가 해제될 때 카운터가 감소한다. 카운터가 0이 되면 해당 객체는 더 이상 사용되지 않으므로 메모리에서 해제될 수 있다. 이 방식은 메모리 관리에서 유용하지만, 동시성 문제를 해결하기 위해 추가적인 동기화가 필요하다.&lt;/p>
+&lt;h3 id="rcu가-reference-counting을-어떻게-보완하는지">RCU가 Reference Counting을 어떻게 보완하는지
+&lt;/h3>&lt;p>RCU는 Reference Counting의 단점을 보완하는 데 도움을 준다. Reference Counting은 객체의 참조가 해제될 때 즉시 메모리를 해제하는 반면, RCU는 읽기 작업이 진행되는 동안 객체가 안전하게 유지될 수 있도록 한다. RCU는 읽기 작업이 완료될 때까지 객체를 유지하고, 그 후에 메모리를 해제할 수 있도록 하여 동시성 문제를 최소화한다. 이로 인해 RCU는 높은 성능을 유지하면서도 안전한 데이터 접근을 가능하게 한다.&lt;/p>
+&lt;h3 id="rcu를-통한-안전한-데이터-접근">RCU를 통한 안전한 데이터 접근
+&lt;/h3>&lt;p>RCU를 사용하면 여러 스레드가 동시에 데이터를 읽을 수 있으며, 데이터의 업데이트는 별도의 스레드에서 안전하게 수행될 수 있다. 이를 통해 데이터의 일관성을 유지하면서도 성능을 극대화할 수 있다. RCU는 읽기 작업이 진행되는 동안 데이터의 상태를 변경하지 않기 때문에, 읽기 작업이 완료된 후에만 데이터의 변경이 이루어질 수 있다.&lt;/p>
+&lt;p>아래는 RCU를 사용한 안전한 데이터 접근을 보여주는 간단한 코드 예시이다.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;span class="lnt">33
+&lt;/span>&lt;span class="lnt">34
+&lt;/span>&lt;span class="lnt">35
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;linux/rcupdate.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;linux/slab.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">struct&lt;/span> &lt;span class="n">data&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">value&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">rcu_head&lt;/span> &lt;span class="n">rcu&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">};&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">struct&lt;/span> &lt;span class="n">data&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">my_data&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">update_data&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">int&lt;/span> &lt;span class="n">new_value&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">data&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">new_data&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">new_data&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">kmalloc&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">data&lt;/span>&lt;span class="p">),&lt;/span> &lt;span class="n">GFP_KERNEL&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">new_data&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">value&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">new_value&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">rcu_assign_pointer&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">my_data&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">new_data&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">call_rcu&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">new_data&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">rcu&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">free_data&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">free_data&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">struct&lt;/span> &lt;span class="n">rcu_head&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">rcu&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">data&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">data&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">container_of&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">rcu&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="k">struct&lt;/span> &lt;span class="n">data&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">rcu&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">kfree&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">data&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">int&lt;/span> &lt;span class="nf">read_data&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">void&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">data&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">data&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">rcu_read_lock&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">data&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">rcu_dereference&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">my_data&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">value&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">data&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">value&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">rcu_read_unlock&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">value&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>위의 코드에서 &lt;code>update_data&lt;/code> 함수는 새로운 데이터를 생성하고, &lt;code>rcu_assign_pointer&lt;/code>를 사용하여 포인터를 안전하게 업데이트한다. &lt;code>read_data&lt;/code> 함수는 &lt;code>rcu_read_lock&lt;/code>과 &lt;code>rcu_read_unlock&lt;/code>을 사용하여 안전하게 데이터를 읽는다. 이와 같은 방식으로 RCU는 Reference Counting의 단점을 보완하며, 안전한 데이터 접근을 가능하게 한다.&lt;/p>
+&lt;pre class="mermaid">graph TD;
+A[Read Operation] --&amp;gt;|rcu_read_lock| B[Access Data]
+B --&amp;gt; C[rcu_read_unlock]
+D[Update Operation] --&amp;gt;|call_rcu| E[Free Data]
+D --&amp;gt;|rcu_assign_pointer| F[Update Pointer]
+F --&amp;gt; G[New Data]
+G --&amp;gt;|rcu_head| E
+&lt;/pre>
+&lt;p>위의 다이어그램은 RCU의 작동 방식을 시각적으로 나타낸 것이다. 읽기 작업과 업데이트 작업이 어떻게 상호작용하는지를 보여준다. RCU는 동시성 문제를 해결하면서도 성능을 유지할 수 있는 강력한 메커니즘이다.&lt;/p>
+&lt;!--
+## 9. RCU API의 전체 목록
+- RCU 리스트 탐색 API
+- RCU 포인터/리스트 업데이트 API
+- RCU 관련 API 카테고리
+-->
+&lt;h2 id="rcu-api의-전체-목록">RCU API의 전체 목록
+&lt;/h2>&lt;p>RCU (Read-Copy-Update) API는 RCU 메커니즘을 활용하여 데이터 구조를 안전하게 업데이트하고 탐색할 수 있도록 돕는 함수들로 구성되어 있다. 이 섹션에서는 RCU API의 주요 카테고리와 각 API의 기능에 대해 설명하겠다.&lt;/p>
+&lt;h3 id="rcu-리스트-탐색-api">RCU 리스트 탐색 API
+&lt;/h3>&lt;p>RCU 리스트 탐색 API는 RCU를 사용하여 안전하게 리스트를 탐색할 수 있도록 지원한다. 이 API는 주로 읽기 작업을 수행하는 스레드에서 사용되며, 데이터의 일관성을 보장한다.&lt;/p>
+&lt;p>&lt;strong>rcu_dereference()&lt;/strong>: 이 함수는 RCU 보호 하에 있는 포인터를 안전하게 역참조하는 데 사용된다. 이 함수를 사용하면, 읽기 작업이 진행되는 동안 데이터가 변경되지 않도록 보장할 수 있다.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="k">struct&lt;/span> &lt;span class="n">my_struct&lt;/span> &lt;span class="o">*&lt;/span>&lt;span class="n">ptr&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="n">ptr&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="nf">rcu_dereference&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">my_rcu_pointer&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>&lt;strong>rcu_assign_pointer()&lt;/strong>: 이 함수는 RCU 보호 하에 있는 포인터를 안전하게 할당하는 데 사용된다. 이 함수를 사용하면, 포인터의 할당이 다른 스레드에 의해 읽히는 동안 안전하게 이루어질 수 있다.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="nf">rcu_assign_pointer&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">my_rcu_pointer&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">new_ptr&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="rcu-포인터리스트-업데이트-api">RCU 포인터/리스트 업데이트 API
+&lt;/h3>&lt;p>RCU 포인터 및 리스트 업데이트 API는 데이터 구조를 안전하게 업데이트하는 데 필요한 함수들로 구성되어 있다. 이 API는 주로 쓰기 작업을 수행하는 스레드에서 사용된다.&lt;/p>
+&lt;p>&lt;strong>call_rcu()&lt;/strong>: 이 함수는 비동기적으로 콜백 함수를 호출하여 RCU 보호 하에 있는 데이터 구조를 안전하게 해제할 수 있도록 한다. 이 함수는 업데이트가 완료된 후에 메모리를 해제하는 데 유용하다.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="nf">call_rcu&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">my_rcu_struct&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">rcu_head&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">my_callback_function&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>&lt;strong>synchronize_rcu()&lt;/strong>: 이 함수는 모든 RCU 읽기 작업이 완료될 때까지 대기하는 데 사용된다. 이 함수는 데이터 구조의 안전한 업데이트를 보장하기 위해 필요하다.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="nf">synchronize_rcu&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="rcu-관련-api-카테고리">RCU 관련 API 카테고리
+&lt;/h3>&lt;p>RCU API는 여러 카테고리로 나눌 수 있으며, 각 카테고리는 특정한 기능을 수행한다. 주요 카테고리는 다음과 같다.&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>읽기 API&lt;/strong>: 데이터 구조를 안전하게 읽기 위한 API로, rcu_dereference()와 rcu_read_lock()/rcu_read_unlock()이 포함된다.&lt;/li>
+&lt;li>&lt;strong>쓰기 API&lt;/strong>: 데이터 구조를 안전하게 업데이트하기 위한 API로, rcu_assign_pointer(), call_rcu(), synchronize_rcu()가 포함된다.&lt;/li>
+&lt;li>&lt;strong>유틸리티 API&lt;/strong>: RCU의 동작을 보조하는 다양한 유틸리티 함수들이 포함된다.&lt;/li>
+&lt;/ul>
+&lt;pre class="mermaid">graph TD;
+A[RCU API] --&amp;gt; B[읽기 API]
+A --&amp;gt; C[쓰기 API]
+A --&amp;gt; D[유틸리티 API]
+B --&amp;gt; E[&amp;#34;rcu_dereference()&amp;#34;]
+B --&amp;gt; F[&amp;#34;rcu_read_lock()/rcu_read_unlock()&amp;#34;]
+C --&amp;gt; G[&amp;#34;rcu_assign_pointer()&amp;#34;]
+C --&amp;gt; H[&amp;#34;call_rcu()&amp;#34;]
+C --&amp;gt; I[&amp;#34;synchronize_rcu()&amp;#34;]
+&lt;/pre>
+&lt;p>이와 같이 RCU API는 데이터 구조의 안전한 탐색과 업데이트를 위한 다양한 기능을 제공한다. 각 API는 특정한 상황에서 유용하게 사용될 수 있으며, RCU의 장점을 극대화하는 데 기여한다.&lt;/p>
+&lt;!--
+## 10. RCU 사용 시 고려사항
+- RCU를 사용할 때의 주의사항
+- RCU의 성능 최적화 방법
+- RCU의 적절한 사용 사례
+-->
+&lt;h2 id="rcu-사용-시-고려사항">RCU 사용 시 고려사항
+&lt;/h2>&lt;h3 id="rcu를-사용할-때의-주의사항">RCU를 사용할 때의 주의사항
+&lt;/h3>&lt;p>RCU (Read-Copy-Update)를 사용할 때는 몇 가지 주의사항이 있다. 첫째, RCU는 주로 읽기 작업이 많은 환경에서 효과적이다. 따라서 쓰기 작업이 빈번한 경우에는 RCU의 이점을 충분히 활용하기 어려울 수 있다. 둘째, RCU의 사용은 메모리 관리와 관련된 복잡성을 증가시킬 수 있다. 예를 들어, RCU를 사용하여 메모리를 해제할 때는 synchronize_rcu()를 호출하여 모든 읽기 작업이 완료된 후에야 메모리를 해제해야 한다. 이를 간과하면 메모리 접근 오류가 발생할 수 있다.&lt;/p>
+&lt;h3 id="rcu의-성능-최적화-방법">RCU의 성능 최적화 방법
+&lt;/h3>&lt;p>RCU의 성능을 최적화하기 위해서는 몇 가지 방법을 고려할 수 있다. 첫째, RCU의 읽기 작업을 최적화하기 위해 rcu_read_lock()과 rcu_read_unlock()을 적절히 사용하여 불필요한 잠금을 피해야 한다. 둘째, RCU의 콜백 메커니즘을 활용하여 비동기적으로 메모리를 해제하는 것이 좋다. 이를 통해 쓰기 작업이 블록되지 않도록 할 수 있다. 마지막으로, RCU의 사용 패턴을 분석하여 불필요한 업데이트를 줄이는 것이 성능 향상에 기여할 수 있다.&lt;/p>
+&lt;pre class="mermaid">graph TD;
+A[RCU 사용] --&amp;gt; B[읽기 작업 최적화]
+A --&amp;gt; C[비동기 메모리 해제]
+A --&amp;gt; D[업데이트 패턴 분석]
+B --&amp;gt; E[&amp;#34;rcu_read_lock() 사용&amp;#34;]
+B --&amp;gt; F[&amp;#34;rcu_read_unlock() 사용&amp;#34;]
+C --&amp;gt; G[&amp;#34;synchronize_rcu() 사용&amp;#34;]
+D --&amp;gt; H[불필요한 업데이트 줄이기]
+&lt;/pre>
+&lt;h3 id="rcu의-적절한-사용-사례">RCU의 적절한 사용 사례
+&lt;/h3>&lt;p>RCU는 특정 사용 사례에서 특히 유용하다. 예를 들어, 커널 모듈에서의 데이터 구조 보호, 고속 캐시 시스템, 그리고 대규모 멀티스레드 애플리케이션에서의 데이터 접근 관리에 적합하다. 또한, RCU는 읽기 작업이 빈번하고 쓰기 작업이 드문 경우에 최적의 성능을 발휘한다. 이러한 특성 덕분에 RCU는 리눅스 커널과 같은 고성능 시스템에서 널리 사용되고 있다.&lt;/p>
+&lt;pre class="mermaid">graph TD;
+A[RCU 사용 사례] --&amp;gt; B[커널 모듈 데이터 보호]
+A --&amp;gt; C[고속 캐시 시스템]
+A --&amp;gt; D[대규모 멀티스레드 애플리케이션]
+B --&amp;gt; E[읽기 작업 빈번]
+C --&amp;gt; F[쓰기 작업 드문]
+D --&amp;gt; G[성능 최적화]
+&lt;/pre>
+&lt;p>RCU를 사용할 때는 이러한 고려사항을 염두에 두고 적절한 사용 사례를 선택하는 것이 중요하다. 이를 통해 RCU의 장점을 최대한 활용할 수 있다.&lt;/p>
+&lt;!--
+## 11. FAQ
+- RCU와 다른 동기화 메커니즘의 차이점은 무엇인가요?
+- RCU를 사용할 때의 일반적인 실수는 무엇인가요?
+- RCU의 성능을 어떻게 측정하나요?
+-->
+&lt;h2 id="faq">FAQ
+&lt;/h2>&lt;h3 id="rcu와-다른-동기화-메커니즘의-차이점은-무엇인가요">RCU와 다른 동기화 메커니즘의 차이점은 무엇인가요?
+&lt;/h3>&lt;p>RCU (Read-Copy-Update)는 다른 동기화 메커니즘과 비교했을 때 몇 가지 독특한 특징을 가지고 있다. 일반적인 동기화 메커니즘은 락(lock)을 사용하여 데이터 접근을 제어하는 반면, RCU는 읽기 작업이 진행되는 동안 데이터의 업데이트를 지연시켜 성능을 최적화한다.&lt;/p>
+&lt;p>RCU는 주로 읽기 작업이 많은 환경에서 유리하며, 읽기 작업이 락을 필요로 하지 않기 때문에 높은 동시성을 제공한다. 반면, 락 기반 메커니즘은 읽기와 쓰기 작업 모두에 대해 락을 걸어야 하므로 성능 저하가 발생할 수 있다.&lt;/p>
+&lt;p>아래는 RCU와 락 기반 동기화 메커니즘의 비교를 나타낸 다이어그램이다.&lt;/p>
+&lt;pre class="mermaid">graph TD;
+A[RCU] --&amp;gt;|높은 동시성| B[읽기 작업]
+A --&amp;gt;|지연된 업데이트| C[쓰기 작업]
+D[Lock-based] --&amp;gt;|동시성 저하| E[읽기 작업]
+D --&amp;gt;|즉각적인 업데이트| F[쓰기 작업]
+&lt;/pre>
+&lt;h3 id="rcu를-사용할-때의-일반적인-실수는-무엇인가요">RCU를 사용할 때의 일반적인 실수는 무엇인가요?
+&lt;/h3>&lt;p>RCU를 사용할 때 흔히 발생하는 실수는 다음과 같다:&lt;/p>
+&lt;ol>
+&lt;li>
+&lt;p>&lt;strong>rcu_read_lock()과 rcu_read_unlock()의 불일치&lt;/strong>: RCU의 읽기 세션을 시작할 때는 반드시 rcu_read_lock()을 호출하고, 세션이 끝난 후에는 rcu_read_unlock()을 호출해야 한다. 이를 누락하면 데이터 일관성이 깨질 수 있다.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>synchronize_rcu()의 오용&lt;/strong>: synchronize_rcu()는 모든 RCU 읽기 세션이 완료될 때까지 대기하는 함수이다. 이 함수를 잘못 사용하면 성능 저하를 초래할 수 있다.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>비동기 콜백의 잘못된 사용&lt;/strong>: call_rcu()를 사용하여 비동기 콜백을 등록할 때, 콜백 함수가 올바르게 작성되지 않으면 메모리 누수나 데이터 손상이 발생할 수 있다.&lt;/p>
+&lt;/li>
+&lt;/ol>
+&lt;h3 id="rcu의-성능을-어떻게-측정하나요">RCU의 성능을 어떻게 측정하나요?
+&lt;/h3>&lt;p>RCU의 성능을 측정하는 방법은 여러 가지가 있다. 일반적으로 다음과 같은 지표를 사용한다:&lt;/p>
+&lt;ol>
+&lt;li>
+&lt;p>&lt;strong>읽기 및 쓰기 성능&lt;/strong>: RCU의 주요 장점은 읽기 작업의 성능이다. 읽기와 쓰기 작업의 처리 시간을 측정하여 RCU의 성능을 평가할 수 있다.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>동시성&lt;/strong>: RCU는 높은 동시성을 제공하므로, 여러 스레드가 동시에 읽기 작업을 수행할 때의 성능을 측정하는 것이 중요하다.&lt;/p>
+&lt;/li>
+&lt;li>
+&lt;p>&lt;strong>메모리 사용량&lt;/strong>: RCU는 메모리 사용량에 영향을 미칠 수 있다. 메모리 사용량을 모니터링하여 RCU의 효율성을 평가할 수 있다.&lt;/p>
+&lt;/li>
+&lt;/ol>
+&lt;p>아래는 RCU 성능 측정을 위한 샘플 코드이다.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;linux/rcupdate.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;linux/slab.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">rcu_example&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="kt">void&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">rcu_read_lock&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="c1">// 데이터 읽기 작업
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="nf">rcu_read_unlock&lt;/span>&lt;span class="p">();&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">synchronize_rcu&lt;/span>&lt;span class="p">();&lt;/span> &lt;span class="c1">// 모든 RCU 읽기 세션이 완료될 때까지 대기
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span>&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;p>이와 같은 방법으로 RCU의 성능을 측정하고, 최적화할 수 있는 기회를 찾을 수 있다. RCU는 적절히 사용될 경우 높은 성능을 발휘할 수 있는 강력한 동기화 메커니즘이다.&lt;/p>
+&lt;!--
+## 12. 관련 기술
+- Lock-Free 데이터 구조
+- Concurrent Programming
+- Linux Kernel의 동기화 메커니즘
+-->
+&lt;h2 id="관련-기술">관련 기술
+&lt;/h2>&lt;h3 id="lock-free-데이터-구조">Lock-Free 데이터 구조
+&lt;/h3>&lt;p>Lock-Free 데이터 구조는 멀티스레드 환경에서 동기화 문제를 해결하기 위해 설계된 데이터 구조이다. 이러한 구조는 스레드가 서로의 작업을 방해하지 않고도 안전하게 데이터를 읽고 쓸 수 있도록 한다. Lock-Free 구조는 일반적으로 Atomic Operations를 사용하여 구현되며, 이는 스레드 간의 경합을 최소화하고 성능을 향상시킨다.&lt;/p>
+&lt;p>Lock-Free 데이터 구조의 주요 장점은 다음과 같다.&lt;/p>
+&lt;ul>
+&lt;li>&lt;strong>높은 성능&lt;/strong>: Lock-Free 구조는 스레드가 블록되지 않기 때문에, 높은 동시성을 제공한다.&lt;/li>
+&lt;li>&lt;strong>데드락 방지&lt;/strong>: Lock-Free 구조는 스레드가 서로를 기다리지 않기 때문에 데드락이 발생하지 않는다.&lt;/li>
+&lt;/ul>
+&lt;p>아래는 Lock-Free 스택의 간단한 구현 예시이다.&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;span class="lnt">11
+&lt;/span>&lt;span class="lnt">12
+&lt;/span>&lt;span class="lnt">13
+&lt;/span>&lt;span class="lnt">14
+&lt;/span>&lt;span class="lnt">15
+&lt;/span>&lt;span class="lnt">16
+&lt;/span>&lt;span class="lnt">17
+&lt;/span>&lt;span class="lnt">18
+&lt;/span>&lt;span class="lnt">19
+&lt;/span>&lt;span class="lnt">20
+&lt;/span>&lt;span class="lnt">21
+&lt;/span>&lt;span class="lnt">22
+&lt;/span>&lt;span class="lnt">23
+&lt;/span>&lt;span class="lnt">24
+&lt;/span>&lt;span class="lnt">25
+&lt;/span>&lt;span class="lnt">26
+&lt;/span>&lt;span class="lnt">27
+&lt;/span>&lt;span class="lnt">28
+&lt;/span>&lt;span class="lnt">29
+&lt;/span>&lt;span class="lnt">30
+&lt;/span>&lt;span class="lnt">31
+&lt;/span>&lt;span class="lnt">32
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-c" data-lang="c">&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;stdatomic.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">#include&lt;/span> &lt;span class="cpf">&amp;lt;stdlib.h&amp;gt;&lt;/span>&lt;span class="cp">
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="cp">&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">typedef&lt;/span> &lt;span class="k">struct&lt;/span> &lt;span class="n">Node&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">value&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">struct&lt;/span> &lt;span class="n">Node&lt;/span>&lt;span class="o">*&lt;/span> &lt;span class="n">next&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span> &lt;span class="n">Node&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="k">typedef&lt;/span> &lt;span class="k">struct&lt;/span> &lt;span class="n">LockFreeStack&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">Node&lt;/span>&lt;span class="o">*&lt;/span> &lt;span class="n">head&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span> &lt;span class="n">LockFreeStack&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">void&lt;/span> &lt;span class="nf">push&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">LockFreeStack&lt;/span>&lt;span class="o">*&lt;/span> &lt;span class="n">stack&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="kt">int&lt;/span> &lt;span class="n">value&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">Node&lt;/span>&lt;span class="o">*&lt;/span> &lt;span class="n">new_node&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">Node&lt;/span>&lt;span class="o">*&lt;/span>&lt;span class="p">)&lt;/span>&lt;span class="nf">malloc&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="k">sizeof&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">Node&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">new_node&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">value&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">value&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">do&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">new_node&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">next&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">stack&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">head&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span> &lt;span class="k">while&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="o">!&lt;/span>&lt;span class="nf">atomic_compare_exchange_weak&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">stack&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">head&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">new_node&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">next&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">new_node&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="kt">int&lt;/span> &lt;span class="nf">pop&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">LockFreeStack&lt;/span>&lt;span class="o">*&lt;/span> &lt;span class="n">stack&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">Node&lt;/span>&lt;span class="o">*&lt;/span> &lt;span class="n">old_head&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">do&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="n">old_head&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">stack&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">head&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">if&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="n">old_head&lt;/span> &lt;span class="o">==&lt;/span> &lt;span class="nb">NULL&lt;/span>&lt;span class="p">)&lt;/span> &lt;span class="p">{&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="o">-&lt;/span>&lt;span class="mi">1&lt;/span>&lt;span class="p">;&lt;/span> &lt;span class="c1">// 스택이 비어있음
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="c1">&lt;/span> &lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">}&lt;/span> &lt;span class="k">while&lt;/span> &lt;span class="p">(&lt;/span>&lt;span class="o">!&lt;/span>&lt;span class="nf">atomic_compare_exchange_weak&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">stack&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">head&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="o">&amp;amp;&lt;/span>&lt;span class="n">old_head&lt;/span>&lt;span class="p">,&lt;/span> &lt;span class="n">old_head&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">next&lt;/span>&lt;span class="p">));&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="kt">int&lt;/span> &lt;span class="n">value&lt;/span> &lt;span class="o">=&lt;/span> &lt;span class="n">old_head&lt;/span>&lt;span class="o">-&amp;gt;&lt;/span>&lt;span class="n">value&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="nf">free&lt;/span>&lt;span class="p">(&lt;/span>&lt;span class="n">old_head&lt;/span>&lt;span class="p">);&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="k">return&lt;/span> &lt;span class="n">value&lt;/span>&lt;span class="p">;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">}&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="concurrent-programming">Concurrent Programming
+&lt;/h3>&lt;p>Concurrent Programming은 여러 프로세스나 스레드가 동시에 실행되는 프로그램을 작성하는 기법이다. 이 기법은 멀티코어 프로세서의 성능을 극대화하고, 사용자 경험을 향상시키기 위해 필수적이다. Concurrent Programming에서는 스레드 간의 데이터 공유와 동기화가 중요한 이슈로 다루어진다.&lt;/p>
+&lt;p>RCU는 Concurrent Programming의 한 형태로, 읽기 작업이 많은 환경에서 성능을 극대화하는 데 유용하다. RCU는 읽기 작업이 블록되지 않도록 하여, 동시성 문제를 해결하는 데 도움을 준다.&lt;/p>
+&lt;p>아래는 Concurrent Programming의 기본 개념을 설명하는 다이어그램이다.&lt;/p>
+&lt;pre class="mermaid">graph TD;
+A[Main Thread] --&amp;gt;|Create| B[Worker Thread 1]
+A --&amp;gt;|Create| C[Worker Thread 2]
+B --&amp;gt;|Read Data| D[Shared Data]
+C --&amp;gt;|Read Data| D
+B --&amp;gt;|Update Data| D
+C --&amp;gt;|Update Data| D
+&lt;/pre>
+&lt;h3 id="linux-kernel의-동기화-메커니즘">Linux Kernel의 동기화 메커니즘
+&lt;/h3>&lt;p>Linux Kernel은 멀티스레드 환경에서 데이터 일관성을 유지하기 위해 다양한 동기화 메커니즘을 제공한다. 이들 메커니즘은 주로 Lock, Semaphore, RCU와 같은 기법으로 구성된다. 각 기법은 특정 상황에서의 성능과 효율성을 고려하여 선택된다.&lt;/p>
+&lt;p>RCU는 특히 읽기 작업이 많은 상황에서 유용하며, 데이터 구조의 업데이트가 필요할 때도 효율적으로 작동한다. RCU는 읽기 작업이 블록되지 않도록 하여, 시스템의 전반적인 성능을 향상시킨다.&lt;/p>
+&lt;p>아래는 Linux Kernel의 동기화 메커니즘을 설명하는 다이어그램이다.&lt;/p>
+&lt;pre class="mermaid">graph TD;
+A[User Space] --&amp;gt;|System Call| B[Kernel Space]
+B --&amp;gt;|Lock| C[Mutex]
+B --&amp;gt;|Lock| D[Spinlock]
+B --&amp;gt;|RCU| E[Read-Copy-Update]
+C --&amp;gt;|Access Data| F[Shared Resource]
+D --&amp;gt;|Access Data| F
+E --&amp;gt;|Access Data| F
+&lt;/pre>
+&lt;p>이와 같이 Lock-Free 데이터 구조, Concurrent Programming, 그리고 Linux Kernel의 동기화 메커니즘은 RCU와 밀접한 관련이 있으며, 멀티스레드 환경에서의 성능 최적화에 기여한다.&lt;/p>
+&lt;!--
+## 13. 결론
+- RCU의 중요성과 미래
+- RCU의 발전 방향
+- RCU를 통한 성능 향상 가능성
+-->
+&lt;h2 id="결론">결론
+&lt;/h2>&lt;h3 id="rcu의-중요성과-미래">RCU의 중요성과 미래
+&lt;/h3>&lt;p>Read-Copy-Update (RCU) 기술은 현대의 고성능 시스템에서 필수적인 동기화 메커니즘으로 자리잡고 있다. RCU는 읽기 작업이 빈번하고 쓰기 작업이 드문 환경에서 특히 유용하다. 이는 데이터 구조에 대한 읽기 작업이 동시에 이루어질 수 있도록 하여, 성능을 극대화하는 데 기여한다. 앞으로도 RCU는 멀티코어 프로세서와 분산 시스템의 발전에 따라 더욱 중요해질 것으로 예상된다. 특히, 실시간 시스템이나 고성능 컴퓨팅 환경에서 RCU의 활용은 더욱 증가할 것이다.&lt;/p>
+&lt;h3 id="rcu의-발전-방향">RCU의 발전 방향
+&lt;/h3>&lt;p>RCU 기술은 지속적으로 발전하고 있으며, 새로운 사용 사례와 최적화 기법이 연구되고 있다. 예를 들어, RCU의 비동기 콜백 메커니즘은 더욱 효율적인 메모리 관리와 성능 향상을 가능하게 하고 있다. 또한, RCU와 다른 동기화 메커니즘 간의 통합 연구도 활발히 진행되고 있어, 다양한 환경에서의 적용 가능성이 높아지고 있다. 이러한 발전은 RCU의 유연성과 확장성을 더욱 강화할 것이다.&lt;/p>
+&lt;h3 id="rcu를-통한-성능-향상-가능성">RCU를 통한 성능 향상 가능성
+&lt;/h3>&lt;p>RCU는 성능 향상에 기여하는 여러 가지 방법을 제공한다. 예를 들어, RCU를 사용하면 데이터 구조의 업데이트가 비차단 방식으로 이루어지므로, 읽기 작업이 지연되지 않고 빠르게 처리될 수 있다. 아래는 RCU를 활용한 성능 향상 예시를 보여주는 간단한 다이어그램이다.&lt;/p>
+&lt;pre class="mermaid">graph TD;
+A[Read Operation] --&amp;gt;|Non-blocking| B[RCU Read Lock]
+B --&amp;gt; C[Access Data]
+C --&amp;gt; D[RCU Read Unlock]
+E[Update Operation] --&amp;gt;|Deferred| F[RCU Update]
+F --&amp;gt; G[Data Structure Update]
+&lt;/pre>
+&lt;p>위의 다이어그램은 RCU의 읽기 작업이 비차단 방식으로 이루어지는 과정을 보여준다. 이와 같은 방식으로 RCU는 성능을 극대화할 수 있는 기회를 제공한다. 따라서 RCU는 앞으로도 다양한 시스템에서 성능 향상을 위한 중요한 도구로 자리잡을 것이다.&lt;/p>
+&lt;!--
+## 14. 참고 자료
+- RCU 관련 논문 및 자료
+- RCU에 대한 추가 학습 자료
+- RCU 관련 커뮤니티 및 포럼
+-->
+&lt;!--
+##### Reference #####
+-->
+&lt;h2 id="reference">Reference
+&lt;/h2>&lt;ul>
+&lt;li>&lt;a class="link" href="https://www.kernel.org/doc/html/next/RCU/whatisRCU.html" target="_blank" rel="noopener"
+>https://www.kernel.org/doc/html/next/RCU/whatisRCU.html&lt;/a>&lt;/li>
+&lt;/ul></description></item><item><title>Markdown Syntax Guide</title><link>https://demo.stack.jimmycai.com/p/markdown-syntax-guide/</link><pubDate>Thu, 07 Sep 2023 00:00:00 +0000</pubDate><guid>https://demo.stack.jimmycai.com/p/markdown-syntax-guide/</guid><description>&lt;p>This article offers a sample of basic Markdown syntax that can be used in Hugo content files, also it shows whether basic HTML elements are decorated with CSS in a Hugo theme.&lt;/p>
+&lt;h2 id="headings">Headings
+&lt;/h2>&lt;p>The following HTML &lt;code>&amp;lt;h1&amp;gt;&lt;/code>—&lt;code>&amp;lt;h6&amp;gt;&lt;/code> elements represent six levels of section headings. &lt;code>&amp;lt;h1&amp;gt;&lt;/code> is the highest section level while &lt;code>&amp;lt;h6&amp;gt;&lt;/code> is the lowest.&lt;/p>
+&lt;h1 id="h1">H1
+&lt;/h1>&lt;h2 id="h2">H2
+&lt;/h2>&lt;h3 id="h3">H3
+&lt;/h3>&lt;h4 id="h4">H4
+&lt;/h4>&lt;h5 id="h5">H5
+&lt;/h5>&lt;h6 id="h6">H6
+&lt;/h6>&lt;h2 id="paragraph">Paragraph
+&lt;/h2>&lt;p>Xerum, quo qui aut unt expliquam qui dolut labo. Aque venitatiusda cum, voluptionse latur sitiae dolessi aut parist aut dollo enim qui voluptate ma dolestendit peritin re plis aut quas inctum laceat est volestemque commosa as cus endigna tectur, offic to cor sequas etum rerum idem sintibus eiur? Quianimin porecus evelectur, cum que nis nust voloribus ratem aut omnimi, sitatur? Quiatem. Nam, omnis sum am facea corem alique molestrunt et eos evelece arcillit ut aut eos eos nus, sin conecerem erum fuga. Ri oditatquam, ad quibus unda veliamenimin cusam et facea ipsamus es exerum sitate dolores editium rerore eost, temped molorro ratiae volorro te reribus dolorer sperchicium faceata tiustia prat.&lt;/p>
+&lt;p>Itatur? Quiatae cullecum rem ent aut odis in re eossequodi nonsequ idebis ne sapicia is sinveli squiatum, core et que aut hariosam ex eat.&lt;/p>
+&lt;h2 id="blockquotes">Blockquotes
+&lt;/h2>&lt;p>The blockquote element represents content that is quoted from another source, optionally with a citation which must be within a &lt;code>footer&lt;/code> or &lt;code>cite&lt;/code> element, and optionally with in-line changes such as annotations and abbreviations.&lt;/p>
+&lt;h3 id="blockquote-without-attribution">Blockquote without attribution
+&lt;/h3>&lt;blockquote>
+&lt;p>Tiam, ad mint andaepu dandae nostion secatur sequo quae.
+&lt;strong>Note&lt;/strong> that you can use &lt;em>Markdown syntax&lt;/em> within a blockquote.&lt;/p>
+&lt;/blockquote>
+&lt;h3 id="blockquote-with-attribution">Blockquote with attribution
+&lt;/h3>&lt;blockquote>
+&lt;p>Don&amp;rsquo;t communicate by sharing memory, share memory by communicating.&lt;br>
+— &lt;cite>Rob Pike&lt;sup id="fnref:1">&lt;a href="#fn:1" class="footnote-ref" role="doc-noteref">1&lt;/a>&lt;/sup>&lt;/cite>&lt;/p>
+&lt;/blockquote>
+&lt;h2 id="tables">Tables
+&lt;/h2>&lt;p>Tables aren&amp;rsquo;t part of the core Markdown spec, but Hugo supports supports them out-of-the-box.&lt;/p>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>Name&lt;/th>
+&lt;th>Age&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>Bob&lt;/td>
+&lt;td>27&lt;/td>
+&lt;/tr>
+&lt;tr>
+&lt;td>Alice&lt;/td>
+&lt;td>23&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;h3 id="inline-markdown-within-tables">Inline Markdown within tables
+&lt;/h3>&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>Italics&lt;/th>
+&lt;th>Bold&lt;/th>
+&lt;th>Code&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>&lt;em>italics&lt;/em>&lt;/td>
+&lt;td>&lt;strong>bold&lt;/strong>&lt;/td>
+&lt;td>&lt;code>code&lt;/code>&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;table>
+&lt;thead>
+&lt;tr>
+&lt;th>A&lt;/th>
+&lt;th>B&lt;/th>
+&lt;th>C&lt;/th>
+&lt;th>D&lt;/th>
+&lt;th>E&lt;/th>
+&lt;th>F&lt;/th>
+&lt;/tr>
+&lt;/thead>
+&lt;tbody>
+&lt;tr>
+&lt;td>Lorem ipsum dolor sit amet, consectetur adipiscing elit.&lt;/td>
+&lt;td>Phasellus ultricies, sapien non euismod aliquam, dui ligula tincidunt odio, at accumsan nulla sapien eget ex.&lt;/td>
+&lt;td>Proin eleifend dictum ipsum, non euismod ipsum pulvinar et. Vivamus sollicitudin, quam in pulvinar aliquam, metus elit pretium purus&lt;/td>
+&lt;td>Proin sit amet velit nec enim imperdiet vehicula.&lt;/td>
+&lt;td>Ut bibendum vestibulum quam, eu egestas turpis gravida nec&lt;/td>
+&lt;td>Sed scelerisque nec turpis vel viverra. Vivamus vitae pretium sapien&lt;/td>
+&lt;/tr>
+&lt;/tbody>
+&lt;/table>
+&lt;h2 id="code-blocks">Code Blocks
+&lt;/h2>&lt;h3 id="code-block-with-backticks">Code block with backticks
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt"> 1
+&lt;/span>&lt;span class="lnt"> 2
+&lt;/span>&lt;span class="lnt"> 3
+&lt;/span>&lt;span class="lnt"> 4
+&lt;/span>&lt;span class="lnt"> 5
+&lt;/span>&lt;span class="lnt"> 6
+&lt;/span>&lt;span class="lnt"> 7
+&lt;/span>&lt;span class="lnt"> 8
+&lt;/span>&lt;span class="lnt"> 9
+&lt;/span>&lt;span class="lnt">10
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-html" data-lang="html">&lt;span class="line">&lt;span class="cl">&lt;span class="cp">&amp;lt;!doctype html&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">html&lt;/span> &lt;span class="na">lang&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s">&amp;#34;en&amp;#34;&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">head&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">meta&lt;/span> &lt;span class="na">charset&lt;/span>&lt;span class="o">=&lt;/span>&lt;span class="s">&amp;#34;utf-8&amp;#34;&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">title&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>Example HTML5 Document&lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">title&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">head&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">body&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> &lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">p&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>Test&lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">p&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">body&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">html&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="code-block-indented-with-four-spaces">Code block indented with four spaces
+&lt;/h3>&lt;pre>&lt;code>&amp;lt;!doctype html&amp;gt;
+&amp;lt;html lang=&amp;quot;en&amp;quot;&amp;gt;
+&amp;lt;head&amp;gt;
+&amp;lt;meta charset=&amp;quot;utf-8&amp;quot;&amp;gt;
+&amp;lt;title&amp;gt;Example HTML5 Document&amp;lt;/title&amp;gt;
+&amp;lt;/head&amp;gt;
+&amp;lt;body&amp;gt;
+&amp;lt;p&amp;gt;Test&amp;lt;/p&amp;gt;
+&amp;lt;/body&amp;gt;
+&amp;lt;/html&amp;gt;
+&lt;/code>&lt;/pre>
+&lt;h3 id="diff-code-block">Diff code block
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;span class="lnt">4
+&lt;/span>&lt;span class="lnt">5
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-diff" data-lang="diff">&lt;span class="line">&lt;span class="cl">[dependencies.bevy]
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">git = &amp;#34;https://github.com/bevyengine/bevy&amp;#34;
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">rev = &amp;#34;11f52b8c72fc3a568e8bb4a4cd1f3eb025ac2e13&amp;#34;
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">- features = [&amp;#34;dynamic&amp;#34;]
+&lt;/span>&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">&lt;span class="gd">&lt;/span>&lt;span class="gi">+ features = [&amp;#34;jpeg&amp;#34;, &amp;#34;dynamic&amp;#34;]
+&lt;/span>&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h3 id="one-line-code-block">One line code block
+&lt;/h3>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-html" data-lang="html">&lt;span class="line">&lt;span class="cl">&lt;span class="p">&amp;lt;&lt;/span>&lt;span class="nt">p&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>A paragraph&lt;span class="p">&amp;lt;/&lt;/span>&lt;span class="nt">p&lt;/span>&lt;span class="p">&amp;gt;&lt;/span>
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h2 id="list-types">List Types
+&lt;/h2>&lt;h3 id="ordered-list">Ordered List
+&lt;/h3>&lt;ol>
+&lt;li>First item&lt;/li>
+&lt;li>Second item&lt;/li>
+&lt;li>Third item&lt;/li>
+&lt;/ol>
+&lt;h3 id="unordered-list">Unordered List
+&lt;/h3>&lt;ul>
+&lt;li>List item&lt;/li>
+&lt;li>Another item&lt;/li>
+&lt;li>And another item&lt;/li>
+&lt;/ul>
+&lt;h3 id="nested-list">Nested list
+&lt;/h3>&lt;ul>
+&lt;li>Fruit
+&lt;ul>
+&lt;li>Apple&lt;/li>
+&lt;li>Orange&lt;/li>
+&lt;li>Banana&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;li>Dairy
+&lt;ul>
+&lt;li>Milk&lt;/li>
+&lt;li>Cheese&lt;/li>
+&lt;/ul>
+&lt;/li>
+&lt;/ul>
+&lt;h2 id="other-elements--abbr-sub-sup-kbd-mark">Other Elements — abbr, sub, sup, kbd, mark
+&lt;/h2>&lt;p>&lt;abbr title="Graphics Interchange Format">GIF&lt;/abbr> is a bitmap image format.&lt;/p>
+&lt;p>H&lt;sub>2&lt;/sub>O&lt;/p>
+&lt;p>X&lt;sup>n&lt;/sup> + Y&lt;sup>n&lt;/sup> = Z&lt;sup>n&lt;/sup>&lt;/p>
+&lt;p>Press &lt;kbd>CTRL&lt;/kbd> + &lt;kbd>ALT&lt;/kbd> + &lt;kbd>Delete&lt;/kbd> to end the session.&lt;/p>
+&lt;p>Most &lt;mark>salamanders&lt;/mark> are nocturnal, and hunt for insects, worms, and other small creatures.&lt;/p>
+&lt;div class="footnotes" role="doc-endnotes">
+&lt;hr>
+&lt;ol>
+&lt;li id="fn:1">
+&lt;p>The above quote is excerpted from Rob Pike&amp;rsquo;s &lt;a class="link" href="https://www.youtube.com/watch?v=PAAkCSZUG1c" target="_blank" rel="noopener"
+>talk&lt;/a> during Gopherfest, November 18, 2015.&amp;#160;&lt;a href="#fnref:1" class="footnote-backref" role="doc-backlink">&amp;#x21a9;&amp;#xfe0e;&lt;/a>&lt;/p>
+&lt;/li>
+&lt;/ol>
+&lt;/div></description></item><item><title>Image gallery</title><link>https://demo.stack.jimmycai.com/p/image-gallery/</link><pubDate>Sat, 26 Aug 2023 00:00:00 +0000</pubDate><guid>https://demo.stack.jimmycai.com/p/image-gallery/</guid><description>&lt;img src="https://demo.stack.jimmycai.com/p/image-gallery/2.jpg" alt="Featured image of post Image gallery" />&lt;p>Hugo theme Stack supports the creation of interactive image galleries using Markdown. It&amp;rsquo;s powered by &lt;a class="link" href="https://photoswipe.com/" target="_blank" rel="noopener"
+>PhotoSwipe&lt;/a> and its syntax was inspired by &lt;a class="link" href="https://typlog.com/" target="_blank" rel="noopener"
+>Typlog&lt;/a>.&lt;/p>
+&lt;p>To use this feature, the image must be in the same directory as the Markdown file, as it uses Hugo&amp;rsquo;s page bundle feature to read the dimensions of the image. &lt;strong>External images are not supported.&lt;/strong>&lt;/p>
+&lt;h2 id="syntax">Syntax
+&lt;/h2>&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-markdown" data-lang="markdown">&lt;span class="line">&lt;span class="cl">![&lt;span class="nt">Image 1&lt;/span>](&lt;span class="na">1.jpg&lt;/span>) ![&lt;span class="nt">Image 2&lt;/span>](&lt;span class="na">2.jpg&lt;/span>)
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h2 id="result">Result
+&lt;/h2>&lt;p>&lt;img src="https://demo.stack.jimmycai.com/p/image-gallery/1.jpg"
+width="2000"
+height="1400"
+srcset="https://demo.stack.jimmycai.com/p/image-gallery/1_hu4574578169203714971.jpg 480w, https://demo.stack.jimmycai.com/p/image-gallery/1_hu9042511268598201431.jpg 1024w"
+loading="lazy"
+alt="Image 1"
+class="gallery-image"
+data-flex-grow="142"
+data-flex-basis="342px"
+> &lt;img src="https://demo.stack.jimmycai.com/p/image-gallery/2.jpg"
+width="1500"
+height="2250"
+srcset="https://demo.stack.jimmycai.com/p/image-gallery/2_hu10699635480308914167.jpg 480w, https://demo.stack.jimmycai.com/p/image-gallery/2_hu1741040415904021193.jpg 1024w"
+loading="lazy"
+alt="Image 2"
+class="gallery-image"
+data-flex-grow="66"
+data-flex-basis="160px"
+>&lt;/p>
+&lt;blockquote>
+&lt;p>Photo by &lt;a class="link" href="https://unsplash.com/@mymind" target="_blank" rel="noopener"
+>mymind&lt;/a> and &lt;a class="link" href="https://unsplash.com/@lukechesser" target="_blank" rel="noopener"
+>Luke Chesser&lt;/a> on &lt;a class="link" href="https://unsplash.com/" target="_blank" rel="noopener"
+>Unsplash&lt;/a>&lt;/p>
+&lt;/blockquote></description></item><item><title>Shortcodes</title><link>https://demo.stack.jimmycai.com/p/shortcodes/</link><pubDate>Fri, 25 Aug 2023 00:00:00 +0000</pubDate><guid>https://demo.stack.jimmycai.com/p/shortcodes/</guid><description>&lt;img src="https://demo.stack.jimmycai.com/p/shortcodes/cover.jpg" alt="Featured image of post Shortcodes" />&lt;p>For more details, check out the &lt;a class="link" href="https://stack.jimmycai.com/writing/shortcodes" target="_blank" rel="noopener"
+>documentation&lt;/a>.&lt;/p>
+&lt;h2 id="bilibili-video">Bilibili video
+&lt;/h2>
+&lt;div class="video-wrapper">
+&lt;iframe src="https://player.bilibili.com/player.html?as_wide=1&amp;amp;high_quality=1&amp;amp;page=1&amp;bvid=BV1d4411N7zD"
+scrolling="no"
+frameborder="no"
+framespacing="0"
+allowfullscreen="true"
+>
+&lt;/iframe>
+&lt;/div>
+&lt;h2 id="tencent-video">Tencent video
+&lt;/h2>
+&lt;div class="video-wrapper">
+&lt;iframe src="https://v.qq.com/txp/iframe/player.html?vid=g0014r3khdw&amp;auto=0"
+scrolling="no"
+frameborder="no"
+framespacing="0"
+allowfullscreen="true"
+>
+&lt;/iframe>
+&lt;/div>
+&lt;h2 id="youtube-video">YouTube video
+&lt;/h2>&lt;div class="video-wrapper">
+&lt;iframe loading="lazy"
+src="https://www.youtube.com/embed/0qwALOOvUik"
+allowfullscreen
+title="YouTube Video"
+>
+&lt;/iframe>
+&lt;/div>
+&lt;h2 id="generic-video-file">Generic video file
+&lt;/h2>&lt;div class="video-wrapper">
+&lt;video
+controls
+src="https://www.w3schools.com/tags/movie.mp4"
+>
+&lt;p>
+Your browser doesn't support HTML5 video. Here is a
+&lt;a href="https://www.w3schools.com/tags/movie.mp4">link to the video&lt;/a> instead.
+&lt;/p>
+&lt;/video>
+&lt;/div>
+&lt;h2 id="gist">Gist
+&lt;/h2>&lt;script src="https://gist.github.com/CaiJimmy/e2751a943de10b2a5b3a8a6c2120cb86.js">&lt;/script>
+&lt;h2 id="gitlab">GitLab
+&lt;/h2>&lt;script
+type="application/javascript"
+src="https://gitlab.com/-/snippets/2589724.js"
+>&lt;/script>
+&lt;h2 id="quote">Quote
+&lt;/h2>&lt;blockquote>
+&lt;p>Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.&lt;/p>&lt;span class="cite">&lt;span>― &lt;/span>&lt;span>A famous person, &lt;/span>&lt;a href="https://en.wikipedia.org/wiki/Book">&lt;cite>The book they wrote&lt;/cite>&lt;/a>&lt;/span>&lt;/blockquote>
+&lt;hr>
+&lt;blockquote>
+&lt;p>Photo by &lt;a class="link" href="https://unsplash.com/@codioful" target="_blank" rel="noopener"
+>Codioful&lt;/a> on &lt;a class="link" href="https://unsplash.com/photos/WDSN62Qdxuk" target="_blank" rel="noopener"
+>Unsplash&lt;/a>&lt;/p>
+&lt;/blockquote></description></item><item><title>Math Typesetting</title><link>https://demo.stack.jimmycai.com/p/math-typesetting/</link><pubDate>Thu, 24 Aug 2023 00:00:00 +0000</pubDate><guid>https://demo.stack.jimmycai.com/p/math-typesetting/</guid><description>&lt;p>Stack has built-in support for math typesetting using &lt;a class="link" href="https://katex.org/" target="_blank" rel="noopener"
+>KaTeX&lt;/a>.&lt;/p>
+&lt;p>&lt;strong>It&amp;rsquo;s not enabled by default side-wide,&lt;/strong> but you can enable it for individual posts by adding &lt;code>math: true&lt;/code> to the front matter. Or you can enable it side-wide by adding &lt;code>math = true&lt;/code> to the &lt;code>params.article&lt;/code> section in &lt;code>config.toml&lt;/code>.&lt;/p>
+&lt;h2 id="inline-math">Inline math
+&lt;/h2>&lt;p>This is an inline mathematical expression: $\varphi = \dfrac{1+\sqrt5}{2}= 1.6180339887…$&lt;/p>
+&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-markdown" data-lang="markdown">&lt;span class="line">&lt;span class="cl">$\varphi = \dfrac{1+\sqrt5}{2}= 1.6180339887…$
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>&lt;h2 id="block-math">Block math
+&lt;/h2>$$
+\varphi = 1+\frac{1} {1+\frac{1} {1+\frac{1} {1+\cdots} } }
+$$&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-markdown" data-lang="markdown">&lt;span class="line">&lt;span class="cl">$$
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> \varphi = 1+\frac{1} {1+\frac{1} {1+\frac{1} {1+\cdots} } }
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">$$
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div>$$
+f(x) = \int_{-\infty}^\infty\hat f(\xi)\,e^{2 \pi i \xi x}\,d\xi
+$$&lt;div class="highlight">&lt;div class="chroma">
+&lt;table class="lntable">&lt;tr>&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code>&lt;span class="lnt">1
+&lt;/span>&lt;span class="lnt">2
+&lt;/span>&lt;span class="lnt">3
+&lt;/span>&lt;/code>&lt;/pre>&lt;/td>
+&lt;td class="lntd">
+&lt;pre tabindex="0" class="chroma">&lt;code class="language-markdown" data-lang="markdown">&lt;span class="line">&lt;span class="cl">$$
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl"> f(x) = \int_{-\infty}^\infty\hat f(\xi)\,e^{2 \pi i \xi x}\,d\xi
+&lt;/span>&lt;/span>&lt;span class="line">&lt;span class="cl">$$
+&lt;/span>&lt;/span>&lt;/code>&lt;/pre>&lt;/td>&lt;/tr>&lt;/table>
+&lt;/div>
+&lt;/div></description></item></channel></rss>
